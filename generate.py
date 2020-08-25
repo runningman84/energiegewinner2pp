@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import csv
+import json
 import re
 import locale
 import argparse
@@ -9,6 +10,10 @@ from dateutil.relativedelta import relativedelta
 
 def diff_month(d1, d2):
     return (d1.year - d2.year) * 12 + d1.month - d2.month
+
+def date_converter(o):
+    if isinstance(o, datetime.datetime):
+        return o.__str__()
 
 # required arg
 parser = argparse.ArgumentParser()
@@ -24,7 +29,8 @@ locale.setlocale(locale.LC_ALL, 'de_DE.UTF-8')
 
 start_date = args.start_date
 end_date = args.end_date
-out_filename = args.out_filename
+out_filename_csv = args.out_filename + ".csv"
+out_filename_json = args.out_filename + ".json"
 price = float(args.price)
 
 start_date_obj = datetime.datetime.strptime(start_date, '%Y-%m-%d')
@@ -37,7 +43,6 @@ price_per_month = price / delta_month
 
 parsed_res = []
 
-print (out_filename)
 print(price_per_month)
 
 for x in range(0, delta_month):
@@ -48,21 +53,28 @@ for x in range(0, delta_month):
 
     #print(new_date, new_price)
 
-    dict = {'Datum': new_date,
-        'Kurs': new_price
+    dict = {'date': new_date,
+        'close': new_price
         }
 
     parsed_res.append(dict)
 
-    #print("We're on time %d" % (x))
 
-#print(diff_month(start_date,end_date))
+dict_json = {
+    'start_date' : start_date_obj,
+    'end_date' : end_date_obj,
+    'initial_value' : price,
+    'loss_of_value_per_month' : price_per_month,
+    'data' : parsed_res
+}
 
-
-with open(out_filename, mode='w') as out_file:
+with open(out_filename_csv, mode='w') as csv_file:
     fieldnames = parsed_res[0].keys()
-    writer = csv.DictWriter(out_file, fieldnames=fieldnames, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+    writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
     writer.writeheader()
 
     for dataset in parsed_res:
         writer.writerow(dataset)
+
+with open(out_filename_json, 'w') as json_file:
+  json.dump(dict_json, json_file, default = date_converter)
